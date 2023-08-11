@@ -16,7 +16,6 @@ class TgBot:
 @dataclass
 class Config:
     tg_bot: TgBot
-    db: Database
 
 
 # Функция для отправки конфига
@@ -24,7 +23,6 @@ def load_config(path: str | None = None) -> Config:
     env = Env()
     env.read_env(path)
     return Config(tg_bot=TgBot(token=env('BOT_TOKEN'),
-                               admin_ids=list(map(int, env.list('ADMIN_IDS')))),
-                  db=Database(db_name=env('DATABASE')))
+                               admin_ids=list(map(int, env.list('ADMIN_IDS')))))
 
 print(load_config())
