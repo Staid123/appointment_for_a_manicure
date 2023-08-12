@@ -3,7 +3,7 @@ from aiogram.filters import BaseFilter
 from aiogram.types import Message
 
 
-ADMIN_IDS=664760823, 2037720596
+ADMIN_IDS = 664760823, 2037720596
 
 
 class IsAdmin(BaseFilter):
