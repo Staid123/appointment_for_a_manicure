@@ -1,13 +1,12 @@
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.filters import CommandStart, Command, Text, StateFilter
 from lexicon.lexicon_ru import LEXICON_admin, months
 from aiogram.fsm.context import FSMContext
-from database.tatyana_working import get_connection, init_db, add_messages
+from database.tatiana_working import init_db, add_year_start, get_year, add_month_start
 from states.admin_state import FSMadmin
 from aiogram.fsm.state import default_state
 from filters.admin_filter import IsAdmin
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, CallbackQuery
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery
 from keyboards.admin_keyboards import yes_no_keyboard, enter_month_keyboard, enter_date_working_keyboard
 
 # Регистрируем роутер
@@ -38,14 +37,32 @@ async def process_no_button_press(callback: CallbackQuery):
     await callback.message.answer(text=LEXICON_admin['no_button_press'])
 
 
-# Этот хэндлер будет срабатывать если админ захочет
-# настроить свой график работы
+# Этот хэндлер будет срабатывать если админ захочет 
+# настраивать свой график работы
 @router.callback_query(Text(text='yes_button_press'), StateFilter(default_state))
 async def process_yes_button_press(callback: CallbackQuery, state: FSMContext):
-    print(callback.from_user.first_name)
+    # Удаляем клавиатуру чтобы пользователь не нажимал на кнопки
+    await callback.message.delete()
+    # Благодарим пользователя и просим его ввести год
+    await callback.message.answer(text=LEXICON_admin['yes_button_press'])
+    # Отправляем пользователю колбэк чтобы нажатая кнопка не светилась долго
+    await callback.answer()
+    # Устанавливаем состояние ожидания ввода года
+    await state.set_state(FSMadmin.fill_enter_year)
+
+
+# Этот хэндлер будет срабатывать когда админ введет
+# год с которого он планирует принимать записи
+@router.message(StateFilter(FSMadmin.fill_enter_year), F.text.isdigit())
+async def process_yes_button_press(message: Message, state: FSMContext):
+    # Инициализируем базу данных если отсутствует
+    init_db(force=True)
+    # Записуем год в базу данных
+    add_year_start(message.text)
+    # Принимаем объект инлайн-клавиатуры
     keyboard = enter_month_keyboard()
     # Отправляем пользователю сообщение с клавиатурой
-    await callback.message.edit_text(text=LEXICON_admin['yes_button_press'],
+    await message.answer(text=LEXICON_admin['year_wrote'],
                                      reply_markup=keyboard)
     await state.set_state(FSMadmin.fill_enter_month)
 
@@ -67,11 +84,14 @@ async def process_cancel_button_press(callback: CallbackQuery, state: FSMContext
 # месяца с которого мастер начнет принимать клиентов
 @router.callback_query(Text(text=months.keys()), StateFilter(FSMadmin.fill_enter_month))
 async def process_month_button_press(callback: CallbackQuery, state: FSMContext):
-    # Инициализируем базу данных если отсутствует
-    init_db()
+    # Получаем нынешний год
+    now_year = get_year()
+    # Отправляем в базу месяц и нынешний год
+    add_month_start(now_year, callback.data)
     # Принимаем клавиатуру
-    keyboard: InlineKeyboardMarkup = enter_date_working_keyboard(months[callback.data])
+    keyboard: InlineKeyboardMarkup = enter_date_working_keyboard(callback.data)
     # Отправим пользователю сообщение с клавиатурой где находятся все дни месяца
     await callback.message.edit_text(text=LEXICON_admin['month_button_press'],
                                      reply_markup=keyboard)
+    # Устанавливаем состояние ожидания ввода даты
     await state.set_state(FSMadmin.fill_enter_working_date)

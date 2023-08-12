@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from lexicon.lexicon_ru import months
+from lexicon.lexicon_ru import months, days_of_the_week, backward_forward
 from services.file_handling import day_in_months
 import time
 
@@ -40,11 +40,33 @@ def enter_date_working_keyboard(month):
     kb_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
     # Добавляем месяц первой кнопкой в билдер
     kb_builder.row(InlineKeyboardButton(
-        text=month,
-        callback_data=f'{month}_button_press'
-    ))
-    # Добавляем дни месяца в билдер(5 рядов по 7 кнопок в каждом)
+        text=months[int(month)],
+        callback_data=f'{month}_button_press'))
+    
+    # Добавляем кнопки дни недели в билдер
+    kb_builder.row(*[InlineKeyboardButton(
+        text=day,
+        callback_data=day) for day in days_of_the_week])
+    
+    # Получаем список с днями месяца
     lst_dates = day_in_months(time.strftime('%Y'), month)
+    # Добавляем дни месяца в билдер(5 рядов по 7 кнопок в каждом)
     kb_builder.row(*[InlineKeyboardButton(
         text=date,
-        callback_data=date) '-' for date in lst_dates if date == 0 else date], width=7)
+        callback_data=date) for date in lst_dates], width=7)
+    
+    # Добавляем кнопки подтвердить, отменить в билдер
+    accept_button: InlineKeyboardButton = InlineKeyboardButton(
+        text='✅️ Подвердить',
+        callback_data='accept_button_press')
+    cancel_button: InlineKeyboardButton = InlineKeyboardButton(
+        text='❌ Отменить',
+        callback_data='cancel_button_press'
+    )
+    kb_builder.row(*[cancel_button, accept_button], width=2)
+
+    # Добавляем кнопки назад и вперед в билдер
+    kb_builder.row(*[InlineKeyboardButton(
+        text=button,
+        callback_data=txt) for button, txt in backward_forward.items()])
+    return kb_builder.as_markup()
