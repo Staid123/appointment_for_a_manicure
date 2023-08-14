@@ -25,7 +25,7 @@ def init_db(force: bool = False):
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               year INTEGER,
               month INTEGER,
-              days TEXT,
+              day INTEGER,
               time TEXT
               )
               ''')
@@ -34,57 +34,112 @@ def init_db(force: bool = False):
     conn.commit()
 
 
-def add_year_start(year: int):
-    if _check_year(year):
-        conn = get_connection()
-        c = conn.cursor()
-        c.execute('''INSERT INTO tatiana_working (year) VALUES (?)''', (year, ))
-        conn.commit()
-
-
-def _check_year(year: int):
+# Добавить год в базу данных
+def add_year(year: int):
     conn = get_connection()
     c = conn.cursor()
-    c.execute('''SELECT COUNT(*) FROM tatiana_working WHERE year = ?''', (year, ))
-    (num, ) = c.fetchone()
-    if num <= 12:
-        return True
-    return False
+    c.execute('''INSERT INTO tatiana_working (year) VALUES (?)''', (year, ))
+    conn.commit()
 
 
-def add_month_start(year: int, month: int):
-    if _check_month(year, month):
-        conn = get_connection()
-        c = conn.cursor()
-        c.execute('''UPDATE tatiana_working SET month = ? WHERE month is NULL''', (month, ))
-        conn.commit()
-
-
-def _check_month(year: int, month: int):
+def add_month(month: int):
+    id = _max_id()
     conn = get_connection()
     c = conn.cursor()
-    c.execute('''SELECT COUNT(*) FROM tatiana_working WHERE month = ? and year = ?''', (month, year))
-    (count, ) = c.fetchone()
-    if not count:
-        return True
-    return False
+    c.execute('''UPDATE tatiana_working SET month = ? WHERE id = ?''', (month, id))
+    conn.commit()
+
+
+def add_day(day: int):
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''UPDATE tatiana_working SET day = ? WHERE id = ?''', (day, id))
+    conn.commit()
+
+
+def add_time(time: str):
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''UPDATE tatiana_working SET time = ? WHERE id = ?''', (time, id))
+    conn.commit()
 
 
 def get_year():
+    id = _max_id()
     conn = get_connection()
     c = conn.cursor() 
-    c.execute('''SELECT MAX(year) FROM tatiana_working''')
+    c.execute('''SELECT year FROM tatiana_working WHERE id = ?''', (id, ))
     (res, ) = c.fetchone()
     return res
 
 
+def get_month():
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''SELECT month FROM tatiana_working WHERE id = ?''', (id, ))
+    (res, ) = c.fetchone()
+    return res
+
+
+def get_day():
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''SELECT day FROM tatiana_working WHERE id = ?''', (id, ))
+    (res, ) = c.fetchone()
+    return res
+
+
+def delete_record():
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''DELETE FROM tatiana_working WHERE id = ?''', (id, ))
+    conn.commit()
+
+
+def _max_id():
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''SELECT MAX(id) FROM tatiana_working''')
+    (res, ) = c.fetchone()
+    return res
+
+
+def _check_time():
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''SELECT time FROM tatiana_working WHERE id = ?''', (id, ))
+    (res, ) = c.fetchone()
+    return res
+
+
+def insert_new_record(time: str):
+    conn = get_connection()
+    c = conn.cursor()
+    is_time = _check_time()
+    if is_time:
+        year, month, day = get_year(), get_month(), get_day()
+        c.execute('''INSERT INTO tatiana_working (year, month, day, time) VALUES (?, ?, ?, ?)''', (year, month, day, time))
+    else:
+        add_time(time)
+    conn.commit()
+
+
+def how_many_time():
+    conn = get_connection()
+    c = conn.cursor()
+    year, month, day = get_year(), get_month(), get_day()
+    c.execute('''SELECT time FROM tatiana_working WHERE year = ? and month = ? and day = ?''', (year, month, day))
+    res = c.fetchall()
+    return res
+
 
 if __name__ == '__main__':
-    init_db(force=True)
-    add_year_start(2023)
-    add_month_start(1)
-    add_year_start(2024)
-    add_month_start(1)
-    add_year_start(2023)
-    add_month_start(1)
-    get_year()
+    init_db()
+    print(how_many_time())
+

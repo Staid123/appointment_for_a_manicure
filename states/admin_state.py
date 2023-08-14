@@ -9,3 +9,4 @@ class FSMadmin(StatesGroup):
     fill_enter_year = State() # Состояние ожидания ввода года
     fill_enter_month = State() # Состояние ожидания ввода месяца
     fill_enter_working_date = State() # Состояние ожидания ввода даты
+    fill_enter_working_time = State() # Состояние ожидания ввода времени

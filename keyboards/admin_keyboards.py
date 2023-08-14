@@ -2,7 +2,6 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from lexicon.lexicon_ru import months, days_of_the_week, backward_forward
 from services.file_handling import day_in_months
-import time
 
 
 def yes_no_keyboard() -> InlineKeyboardMarkup:
@@ -35,38 +34,46 @@ def enter_month_keyboard() -> InlineKeyboardMarkup:
     return kb_builder.as_markup()
 
 
-def enter_date_working_keyboard(month):
+def enter_date_working_keyboard(year, month):
     # Создаем билдер
     kb_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
     # Добавляем месяц первой кнопкой в билдер
     kb_builder.row(InlineKeyboardButton(
-        text=months[int(month)],
-        callback_data=f'{month}_button_press'))
+        text=f'{months[int(month)]} {year}',
+        callback_data=f'{months[int(month)]}_button_press'))
     
     # Добавляем кнопки дни недели в билдер
     kb_builder.row(*[InlineKeyboardButton(
         text=day,
-        callback_data=day) for day in days_of_the_week])
+        callback_data=f'{day}_button_press') for day in days_of_the_week])
     
     # Получаем список с днями месяца
-    lst_dates = day_in_months(time.strftime('%Y'), month)
+    lst_dates = day_in_months(year, month)
     # Добавляем дни месяца в билдер(5 рядов по 7 кнопок в каждом)
     kb_builder.row(*[InlineKeyboardButton(
-        text=date,
-        callback_data=date) for date in lst_dates], width=7)
-    
-    # Добавляем кнопки подтвердить, отменить в билдер
-    accept_button: InlineKeyboardButton = InlineKeyboardButton(
-        text='✅️ Подвердить',
-        callback_data='accept_button_press')
-    cancel_button: InlineKeyboardButton = InlineKeyboardButton(
-        text='❌ Отменить',
-        callback_data='cancel_button_press'
-    )
-    kb_builder.row(*[cancel_button, accept_button], width=2)
+        text=dat,
+        callback_data=f'{dat}date') for dat in lst_dates], width=7)
 
     # Добавляем кнопки назад и вперед в билдер
     kb_builder.row(*[InlineKeyboardButton(
         text=button,
         callback_data=txt) for button, txt in backward_forward.items()])
+    # Возвращаем объект инлайн-клавиатуры
+    return kb_builder.as_markup()
+
+
+def enter_time_working_keyboard(list_with_time, is_accept_button=False):
+    # Создаем билдер
+    kb_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
+    # Добавляем в билдер кнопки с временем
+    kb_builder.row(*[InlineKeyboardButton(
+        text=time,
+        callback_data=time) for time in list_with_time], width=3)
+    # Добавляем кнопкy подтвердить в билдер
+    if is_accept_button:
+        accept_button: InlineKeyboardButton = InlineKeyboardButton(
+            text='✅️ Подвердить',
+            callback_data='accept_button_press')
+        kb_builder.row(*[accept_button])
+    # Возвращаем объект инлайн-клавиатуры
     return kb_builder.as_markup()

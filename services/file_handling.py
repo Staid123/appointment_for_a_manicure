@@ -10,3 +10,9 @@ def day_in_months(year: str, month: int):
         else:
             result += [i]
     return result
+
+
+def working_time_in_day():
+    lst = ['8:00', '10:00', '12:00', '14:00', '16:00', '18:00']
+    return lst
+
