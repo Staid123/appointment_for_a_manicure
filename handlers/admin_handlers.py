@@ -1,14 +1,14 @@
 from aiogram import Router, F
-from aiogram.filters import CommandStart, Text, StateFilter, or_f
+from aiogram.filters import CommandStart, Text, StateFilter, or_f, Command
 from lexicon.lexicon_ru import LEXICON_admin, months, LEXICON_admin_commands
 from aiogram.fsm.context import FSMContext
-from database.tatiana_working import init_db, add_year, get_year, add_month, get_month, add_day, delete_record, insert_new_record, how_many_time
+from database.tatiana_working import init_db, add_year, get_year, add_month, get_month, add_day, delete_record, insert_new_record, how_many_time, get_all_records
 from states.admin_state import FSMadmin
 from aiogram.fsm.state import default_state
 from filters.admin_filter import IsAdmin
 from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery
-from keyboards.admin_keyboards import yes_no_keyboard, enter_month_keyboard, enter_date_working_keyboard, enter_time_working_keyboard
-from services.file_handling import working_time_in_day
+from keyboards.admin_keyboards import yes_no_keyboard, enter_month_keyboard, enter_date_working_keyboard, enter_time_working_keyboard, edit_working_date_keyboard
+from services.file_handling import working_time_in_day, format_func1, format_func2
 
 # Регистрируем роутер
 router: Router = Router()
@@ -57,7 +57,7 @@ async def process_yes_button_press(callback: CallbackQuery, state: FSMContext):
 @router.message(StateFilter(FSMadmin.fill_enter_year), F.text.isdigit())
 async def process_yes_button_press(message: Message, state: FSMContext):
     # Инициализируем базу данных если отсутствует
-    init_db(force=True)
+    init_db()
     # Записуем год в базу данных
     add_year(message.text)
     # Принимаем объект инлайн-клавиатуры
@@ -74,9 +74,9 @@ async def process_yes_button_press(message: Message, state: FSMContext):
 async def process_cancel_button_press(callback: CallbackQuery, state: FSMContext):
     # Удаляем предыдущее сообщение с кнопками, чтобы у пользователя
     # не было желания на них понажимать
-    await callback.message.delete()
+    await callback.message.delete_reply_markup()
     # Отправляем пользователю сообщение
-    await callback.message.answer(text=LEXICON_admin['no_button_press'])
+    await callback.message.edit_text(text=LEXICON_admin['no_button_press'])
     # Сбрасываем состояние
     await state.clear()
 
@@ -208,8 +208,53 @@ async def process_accept_button_press(callback: CallbackQuery, state: FSMContext
 # Этот хэндлер будет срабатывать на нажатие команды /help
 @router.message(StateFilter(default_state), Text(text='/help'))
 async def process_help_command(message: Message, state: FSMContext):
-    res: str = str()
-    for command, text in LEXICON_admin_commands.items():
-        res += (f'{command}\n{text}\n\n')
+    # Отправляем словарь с командамми в функцию для форматирования
+    res = format_func1(LEXICON_admin_commands)
     # Отправляем пользователю сообщение со списком всех команд
     await message.answer(text=res)
+
+
+# Этот хэндлер будет срабатывать если админ захочет 
+# настраивать свой график работы
+@router.message(Command(commands=['add_new_working_date']), StateFilter(default_state))
+async def process_add_new_working_date(message: Message, state: FSMContext):
+    # Отправляем пользователю сообщение с просьбой его ввести год
+    await message.answer(text=LEXICON_admin['yes_button_press'])
+    # Устанавливаем состояние ожидания ввода года
+    await state.set_state(FSMadmin.fill_enter_year)
+
+
+# Этот хэндлер будет срабатывать если админ захочет
+# посмотреть дни когда он будет работать
+@router.message(Command(commands=['check_my_working_dates']), StateFilter(default_state))
+async def process_check_my_working_dates(message: Message):
+    # Получаем все записи с базы данных
+    all_records = get_all_records()
+    # Проверяем есть ли записи в базе
+    if all_records:
+        # Отправляем полученный список кортежей в функцию для форматирования
+        res = format_func2(all_records, months)
+        # Отправляем пользователю сообщение с его графиком работы
+        await message.answer(text=f'{res}\n{LEXICON_admin["check_my_working_dates"]}')
+    else:
+        # Так как записей нет, то просим пользователя сделать график работы
+        await message.answer(text=LEXICON_admin['no_records_in_database'])
+
+
+# Этот хэндлер будет срабатывать если админ захочет
+# изменить свой график работы
+@router.message(Command(commands=['edit_my_working_dates']), StateFilter(default_state))
+async def process_edit_my_working_dates(message: Message, state: FSMContext):
+    # Получаем все записи с базы данных
+    all_records = get_all_records()
+    # Если нету записей просим пользователя создать свой график работы
+    if not all_records:
+        await message.answer(text=LEXICON_admin['no_records_in_database'])
+    else:
+        # Получаем клавиатуру
+        keyboard: InlineKeyboardMarkup = edit_working_date_keyboard(all_records)
+        # Отправляем пользователю сообщение с просьбой изменить свой график работы
+        await message.answer(text=LEXICON_admin['edit_working_date'],
+                             reply_markup=keyboard)
+        # Устанавливаем состояние ожидания изменения графика работы
+        await state.set_state(FSMadmin.fill_edit_working_time)

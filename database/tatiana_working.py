@@ -1,6 +1,5 @@
 import sqlite3
 
-
 __connection = None
 
 def get_connection():
@@ -139,7 +138,14 @@ def how_many_time():
     return res
 
 
+def get_all_records():
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''SELECT year, month, day, time FROM tatiana_working''')
+    res = c.fetchall()
+    return res
+
+
 if __name__ == '__main__':
-    init_db()
-    print(how_many_time())
+    init_db(True)
 
