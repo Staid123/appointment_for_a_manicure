@@ -3,8 +3,8 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from config_data.config import Config, load_config
-from handlers import admin_handlers # user_handlers, other_handlers
-from keyboards.main_menu_keyboard import set_main_menu
+from handlers import admin_handlers, admin_other_handlers # user_handlers, other_handlers
+from keyboards.admin_main_menu_keyboard import set_main_menu
 
 # Инициализируем логгер
 logger = logging.getLogger(__name__)
@@ -30,8 +30,8 @@ async def main():
 
     # Регистрируем роутеры в диспетчере
     #dp.include_router(user_handlers)
-    #dp.include_router(other_handlers)
     dp.include_router(admin_handlers.router)
+    dp.include_router(admin_other_handlers.router)
 
     # Пропускаем накопившиеся апдейты и запускаем polling
     await bot.delete_webhook(drop_pending_updates=True)
@@ -40,3 +40,4 @@ async def main():
  
 if __name__ == '__main__':
     asyncio.run(main())
+ 
