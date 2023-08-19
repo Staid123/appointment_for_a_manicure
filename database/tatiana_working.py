@@ -25,7 +25,9 @@ def init_db(force: bool = False):
               year INTEGER,
               month INTEGER,
               day INTEGER,
-              time TEXT
+              time TEXT,
+              client_name TEXT,
+              phone_number TEXT
               )
               ''')
 
@@ -33,11 +35,26 @@ def init_db(force: bool = False):
     conn.commit()
 
 
-# Добавить год в базу данных
-def add_year(year: int):
+def add_client_name(name: str):
     conn = get_connection()
     c = conn.cursor()
-    c.execute('''INSERT INTO tatiana_working (year) VALUES (?)''', (year, ))
+    c.execute('''INSERT INTO tatiana_working (client_name) VALUES (?)''', (name, ))
+    conn.commit()
+
+
+def add_phone_number(phone_number: int):
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor() 
+    c.execute('''UPDATE tatiana_working SET phone_number = ? WHERE id = ?''', (phone_number, id))
+    conn.commit()
+
+
+def add_year(year: int):
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''UPDATE tatiana_working SET year = ? WHERE id = ?''', (year, id))
     conn.commit()
 
 
@@ -63,6 +80,24 @@ def add_time(time: str):
     c = conn.cursor()
     c.execute('''UPDATE tatiana_working SET time = ? WHERE id = ?''', (time, id))
     conn.commit()
+
+
+def get_client_name():
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''SELECT client_name FROM tatiana_working WHERE id = ?''', (id, ))
+    (res, ) = c.fetchone()
+    return res
+
+
+def get_phone_number():
+    id = _max_id()
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''SELECT phone_number FROM tatiana_working WHERE id = ?''', (id, ))
+    (res, ) = c.fetchone()
+    return res
 
 
 def get_year():
@@ -92,11 +127,19 @@ def get_day():
     return res
 
 
-def delete_record():
+def delete_last_record():
     id = _max_id()
     conn = get_connection()
     c = conn.cursor()
     c.execute('''DELETE FROM tatiana_working WHERE id = ?''', (id, ))
+    conn.commit()
+
+
+def delete_some_record(year, month, day, time):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''DELETE FROM tatiana_working 
+              WHERE year = ? and month = ? and day = ? and time = ?''', (year, month, day, time))
     conn.commit()
 
 
@@ -122,8 +165,9 @@ def insert_new_record(time: str):
     c = conn.cursor()
     is_time = _check_time()
     if is_time:
-        year, month, day = get_year(), get_month(), get_day()
-        c.execute('''INSERT INTO tatiana_working (year, month, day, time) VALUES (?, ?, ?, ?)''', (year, month, day, time))
+        client_name, phone_number, year, month, day = get_client_name(), get_phone_number(), get_year(), get_month(), get_day()
+        c.execute('''INSERT INTO tatiana_working (client_name, phone_number, year, month, day, time) 
+                  VALUES (?, ?, ?, ?, ?, ?)''', (client_name, phone_number, year, month, day, time))
     else:
         add_time(time)
     conn.commit()
@@ -141,7 +185,7 @@ def how_many_time():
 def get_all_records():
     conn = get_connection()
     c = conn.cursor()
-    c.execute('''SELECT year, month, day, time FROM tatiana_working''')
+    c.execute('''SELECT client_name, phone_number, year, month, day, time FROM tatiana_working''')
     res = c.fetchall()
     return res
 
