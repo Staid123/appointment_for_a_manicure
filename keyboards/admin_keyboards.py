@@ -68,12 +68,38 @@ def enter_time_working_keyboard(list_with_time, is_accept_button=False):
     # Добавляем в билдер кнопки с временем
     kb_builder.row(*[InlineKeyboardButton(
         text=time,
-        callback_data=time) for time in list_with_time], width=3)
+        callback_data=time) for time in list_with_time], width=4)
     # Добавляем кнопкy подтвердить в билдер
     if is_accept_button:
         accept_button: InlineKeyboardButton = InlineKeyboardButton(
             text='✅️ Подвердить',
             callback_data='accept_button_press')
         kb_builder.row(*[accept_button])
+    # Возвращаем объект инлайн-клавиатуры
+    return kb_builder.as_markup()
+
+
+def edit_working_date_keyboard(records, months, is_accept_button=False):
+    # Создаем билдер
+    kb_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
+    # Добавляем в билдер кнопки с записями и предлагаем удалить
+    for tupl in records:
+        month = months[tupl[3]].lower()
+        if month[-1] in ['ь', 'й']:
+            month = month.replace(month[-1], 'я')
+        else:
+            month += 'а'
+        kb_builder.row(InlineKeyboardButton(
+            text=f'❌ {tupl[-1]} {tupl[4]} {month} {tupl[2]}',
+            callback_data=f'del{tupl[-1]} {tupl[4]} {tupl[3]} {tupl[2]}'))
+    # Добавляем кнопку подтвердить и отменить в билдер
+    if is_accept_button:
+        kb_builder.row(InlineKeyboardButton(
+            text='✅️ Подтвердить',
+            callback_data='accept_button_press'))
+    else:
+        kb_builder.row(InlineKeyboardButton(
+            text='Отменить',
+            callback_data='cancel_button_press'))
     # Возвращаем объект инлайн-клавиатуры
     return kb_builder.as_markup()
