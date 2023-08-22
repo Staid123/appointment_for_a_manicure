@@ -1,15 +1,18 @@
-from aiogram import Router, F, Bot
+from copy import deepcopy
+
+from aiogram import Router, F
 from aiogram.filters import CommandStart, Text, StateFilter, or_f, Command
-from lexicon.lexicon_ru import LEXICON_admin, months, LEXICON_admin_commands
+from lexicon.lexicon_ru import LEXICON_admin, months, LEXICON_admin_commands, LEXICON_admin_type_of_service
 from aiogram.fsm.context import FSMContext
 from database.tatiana_working import (init_db, add_year, get_year, add_month, get_month, add_day, delete_last_record,
                                        insert_new_record, how_many_time, get_all_records, add_client_name, add_phone_number,
-                                       get_client_name, get_phone_number, delete_some_record)
+                                       get_client_name, get_phone_number, delete_some_record, get_service, add_type_of_service)
 from states.admin_state import FSMadmin
 from aiogram.fsm.state import default_state
 from filters.admin_filter import IsAdmin
 from aiogram.types import InlineKeyboardMarkup, Message, CallbackQuery
-from keyboards.admin_keyboards import yes_no_keyboard, enter_month_keyboard, enter_date_working_keyboard, enter_time_working_keyboard, edit_working_date_keyboard
+from keyboards.admin_keyboards import (yes_no_keyboard, enter_month_keyboard, enter_date_working_keyboard,
+                                        enter_time_working_keyboard, edit_working_date_keyboard, enter_type_of_service_keyboard)
 from services.file_handling import check_phone_number, working_time_in_day, format_func1, format_func2
 
 
@@ -84,7 +87,7 @@ async def process_enter_client_phone_number(message: Message, state: FSMContext)
         await message.answer(LEXICON_admin['bad_phone_number'])
     else:
         # Записываем номер телефона в базу данных
-        add_phone_number(f'+{str(message.text)}')
+        add_phone_number(f'{str(message.text)}')
         # Отправляем сообщение пользователю с просьбой ввести год
         await message.answer(LEXICON_admin['good_phone_number'])
         # Устанавливаем состояние ожидания ввода года
@@ -208,44 +211,56 @@ async def process_backward_button_press(callback: CallbackQuery):
     await callback.message.edit_text(text=LEXICON_admin['month_button_press'],
                                      reply_markup=keyboard)
     
-    
-# Этот хэндлер будет срабатывать на нажатие кнопки подтвердить при выборе времени
-@router.callback_query(StateFilter(FSMadmin.fill_enter_working_time), Text(text='accept_button_press'))
-async def process_accept_button_press(callback: CallbackQuery, state: FSMContext):
-    # Удаляем клавиатуру
-    callback.message.delete_reply_markup()
-    # Предлагаем пользователю просмотреть список всех доступных ему команд
-    await callback.message.edit_text(text=LEXICON_admin['end'])
-    # Сбрасываем состояние
-    await state.clear()
-
 
 # Этот хэндлер будет срабатывать на нажатие кнопки время
 @router.callback_query(StateFilter(FSMadmin.fill_enter_working_time))
-async def process_time_button_press(callback: CallbackQuery):
+async def process_time_button_press(callback: CallbackQuery, state: FSMContext):
     # Записываем в базу данных время записи
     insert_new_record(callback.data)
-    # Принимаем список с временем когда пользователь будет работать
-    list_with_times = working_time_in_day()
-    # Получаем список с вренем когда пользователь же работает
-    list_with_how_many_time = how_many_time()
-    # Убираем с этого списка выбраное пользователем время
-    for time in list_with_how_many_time:
-        del_index = list_with_times.index(time[0])
-        del list_with_times[del_index]
-    # Получаем клавиатуру
-    if not list_with_how_many_time:
-        keyboard: InlineKeyboardMarkup = enter_time_working_keyboard(list_with_times)
-    else:
-        keyboard: InlineKeyboardMarkup = enter_time_working_keyboard(list_with_times, is_accept_button=True)
-    # Отправляем пользователю сообщение с предложением продолжить выбор времени в которое он будет работать
-    await callback.message.edit_text(text=LEXICON_admin['time_button_press'], 
-                                     reply_markup=keyboard)
+    # Получаем клавиатуру с видами услуг
+    keyboard: InlineKeyboardMarkup = enter_type_of_service_keyboard(LEXICON_admin_type_of_service)
+    # Благодарим пользователя и просим ввести вид услуги
+    await callback.message.edit_text(
+        text=LEXICON_admin['accept_button_press'],
+        reply_markup=keyboard)
+    # Устанавливаем состояние ожидания ввода типа услуг
+    await state.set_state(FSMadmin.fill_enter_type_of_service)
     
+
+# Этот хэндлер будет срабатывать при выборе услуги
+@router.callback_query(StateFilter(FSMadmin.fill_enter_type_of_service), Text(text=LEXICON_admin_type_of_service))
+async def process_enter_type_of_service(callback: CallbackQuery, state: FSMContext):
+    # Записываем вид услуги в базу данных
+    add_type_of_service(callback.data)
+    # Копируем виды услуг
+    lst_with_services = deepcopy(LEXICON_admin_type_of_service)
+    # Убираем уже нажатые виды услуг
+    services = get_service().split(',')
+    for service in services:
+        del_index = lst_with_services.index(service)
+        del lst_with_services[del_index]
+    # Получаем клавиатуру с видами услуг уже без нажатых услуг
+    keyboard: InlineKeyboardMarkup = enter_type_of_service_keyboard(lst_with_services, is_accept_button=True)
+    # Отправляем пользователю сообщение с клавиатурой
+    await callback.message.edit_text(
+        text=LEXICON_admin['type_of_service_press'],
+        reply_markup=keyboard)
+
+
+# Этот хэндлер будет срабатывать при нажатии кнопки Подтвердить при выборе услуги
+@router.callback_query(StateFilter(FSMadmin.fill_enter_type_of_service), Text(text='accept_button_press'))
+async def process_accept_button_press(callback: CallbackQuery, state: FSMContext):
+    # Убираем клавиатуру
+    await callback.message.delete_reply_markup()
+    # Предлагаем пользователю посмотреть все доступные ему команды
+    await callback.message.edit_text(text=LEXICON_admin['end'])
+    # Убираем состояние
+    await state.clear()
+
 
 # Этот хэндлер будет срабатывать на нажатие команды /help
 @router.message(StateFilter(default_state), Command(commands=['help']))
-async def process_help_command(message: Message, state: FSMContext):
+async def process_help_command(message: Message):
     # Отправляем словарь с командамми в функцию для форматирования
     res = format_func1(LEXICON_admin_commands)
     # Отправляем пользователю сообщение со списком всех команд
@@ -298,7 +313,7 @@ async def process_edit_my_working_dates(message: Message, state: FSMContext):
         await message.answer(text=LEXICON_admin['no_records_in_database'])
 
 
-# Этот хэндлер будет срабатывать если админ захочет
+# Этот хэндлер будет срабатывать если админ 
 # нажмет кнопку отменить при отмене записей
 @router.callback_query(StateFilter(FSMadmin.fill_edit_working_time), Text(text='cancel_button_press'))
 async def cancel_button_press(callback: CallbackQuery, state: FSMContext):
@@ -328,10 +343,10 @@ async def process_delete_record(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(text=callback.message.text,
                              reply_markup=keyboard)
     else:
-        # Отправялем пользователю сообщение что записей больше нет и предлагаем посмотреть список доступных ему команд
+        # Отправляем пользователю сообщение что записей больше нет и предлагаем посмотреть список доступных ему команд
         await callback.message.edit_text(text=LEXICON_admin['no_records_in_database_after_deleting'])
         # Сбрасываем состояние
-        state.clear()
+        await state.clear()
 
 
 # Этот хэндлер будет срабатывать когда пользователь нажмет подтвердить
@@ -343,4 +358,4 @@ async def accept_button_press(callback: CallbackQuery, state: FSMContext):
     # Благодарим пользователя и отправляем ему список всех команд
     await callback.message.edit_text(text=LEXICON_admin['end'])
     # Сбрасываем состояние
-    state.clear()
+    await state.clear()
