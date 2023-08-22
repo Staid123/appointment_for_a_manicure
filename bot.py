@@ -3,7 +3,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from config_data.config import Config, load_config
-from handlers import admin_handlers, admin_other_handlers # user_handlers, other_handlers
+from handlers import admin_handlers, admin_other_handlers, user_handlers
 from keyboards.admin_main_menu_keyboard import set_main_menu
 
 # Инициализируем логгер
@@ -25,13 +25,13 @@ async def main():
                    parse_mode='HTML')
     dp: Dispatcher = Dispatcher()
     
-    # Настраиваем главное меню бота
+    # Настраиваем главное меню бота только для админа
     await set_main_menu(bot)
 
     # Регистрируем роутеры в диспетчере
-    #dp.include_router(user_handlers)
     dp.include_router(admin_handlers.router)
     dp.include_router(admin_other_handlers.router)
+    dp.include_router(user_handlers.router)
 
     # Пропускаем накопившиеся апдейты и запускаем polling
     await bot.delete_webhook(drop_pending_updates=True)
