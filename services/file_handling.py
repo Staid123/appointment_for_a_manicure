@@ -2,7 +2,7 @@ import calendar
 
 
 def check_phone_number(phone_number) -> bool:
-    if phone_number.isdigit() and len(phone_number) == 10 and str(phone_number)[0] == '0':
+    if len(str(phone_number)) == 10 and str(phone_number)[0] == '0':
         return True
     return False
 
@@ -50,5 +50,5 @@ def format_func2(lst: list, months: dict) -> str:
             month = month.replace(month[-1], 'я')
         else:
             month += 'а'
-        res += f'{tupl[0]} на {tupl[-1]} {tupl[4]} {month} {tupl[2]} года.\nНомер телефона клиента: {tupl[1]}\n\n'
+        res += f'{tupl[0]} на {tupl[5]} {tupl[4]} {month} {tupl[2]} года.\nВид услуг: {tupl[-1].lower()}\nНомер телефона клиента: {tupl[1]}\n\n'
     return res
