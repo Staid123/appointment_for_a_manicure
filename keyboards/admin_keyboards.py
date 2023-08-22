@@ -62,21 +62,33 @@ def enter_date_working_keyboard(year, month):
     return kb_builder.as_markup()
 
 
-def enter_time_working_keyboard(list_with_time, is_accept_button=False):
+def enter_time_working_keyboard(list_with_time):
     # Создаем билдер
     kb_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
     # Добавляем в билдер кнопки с временем
     kb_builder.row(*[InlineKeyboardButton(
         text=time,
         callback_data=time) for time in list_with_time], width=4)
+    # Возвращаем объект инлайн-клавиатуры
+    return kb_builder.as_markup()
+
+
+def enter_type_of_service_keyboard(list_with_types_of_service: list, is_accept_button=False):
+    # Создаем билдер
+    kb_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
+    # Добавляем в билдер кнопки с типом услуг
+    kb_builder.row(*[InlineKeyboardButton(
+        text=service,
+        callback_data=service) for service in list_with_types_of_service], width=1)
     # Добавляем кнопкy подтвердить в билдер
     if is_accept_button:
         accept_button: InlineKeyboardButton = InlineKeyboardButton(
-            text='✅️ Подвердить',
+            text='✅️ Подтвердить',
             callback_data='accept_button_press')
-        kb_builder.row(*[accept_button])
+        kb_builder.row(accept_button)
     # Возвращаем объект инлайн-клавиатуры
     return kb_builder.as_markup()
+
 
 
 def edit_working_date_keyboard(records, months, is_accept_button=False):
@@ -90,8 +102,8 @@ def edit_working_date_keyboard(records, months, is_accept_button=False):
         else:
             month += 'а'
         kb_builder.row(InlineKeyboardButton(
-            text=f'❌ {tupl[-1]} {tupl[4]} {month} {tupl[2]}',
-            callback_data=f'del{tupl[-1]} {tupl[4]} {tupl[3]} {tupl[2]}'))
+            text=f'❌ {tupl[5]} {tupl[4]} {month} {tupl[2]}',
+            callback_data=f'del{tupl[5]} {tupl[4]} {tupl[3]} {tupl[2]}'))
     # Добавляем кнопку подтвердить и отменить в билдер
     if is_accept_button:
         kb_builder.row(InlineKeyboardButton(
