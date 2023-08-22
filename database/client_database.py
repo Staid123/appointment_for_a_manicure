@@ -41,7 +41,7 @@ class InitDatabase(GetConnection):
 
 class Records(GetConnection):
 
-    def __init__(self, client_name, type_of_service, date, phone_number, user_id):
+    def __init__(self, client_name=None, type_of_service=None, date=None, phone_number=None, user_id=None):
         super().__init__()
         self.client_name = client_name
         self.type_of_services = type_of_service
@@ -68,6 +68,13 @@ class CountRecords(Records):
         return res
 
 
+class GetRecords(Records):
+
+    def get_records(self):
+        self.c.execute('''SELECT type_of_service, date 
+                       FROM clients WHERE user_id = ?''', (self.user_id, ))
+        res = self.c.fetchall()
+        return res
 
 
 if __name__ == '__main__':
