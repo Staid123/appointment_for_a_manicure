@@ -4,7 +4,7 @@ from aiogram.types import BotCommand
 from lexicon.lexicon_ru import LEXICON_admin_commands
 
 
-# Функция для настройки кнопки Menu бота
+# Функция для настройки кнопки Menu бота для админа
 async def set_main_menu(bot: Bot):
     main_menu_commands = [BotCommand(
         command=command,
